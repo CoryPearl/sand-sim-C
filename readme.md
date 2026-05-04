@@ -1,7 +1,5 @@
 # Fast Sand Sim in C
 
----
-
 ![Local Image](assets/screenshot.png)
 
 This is a Sand Particle Simulator writin in C with the Raylib Library.
