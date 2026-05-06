@@ -2,6 +2,8 @@
 
 ![Local Image](assets/screenshot.png)
 
+Demo: [bestsandsim.vercel.app](https://bestsandsim.vercel.app)
+
 This is a Sand Particle Simulator writin in C with the Raylib Library.
 
 ## Features
@@ -21,6 +23,7 @@ Other:
 
 - Hammer to destroy any particles
 - Change amount of particles placed at once
+- Pet jimmy
 
 ## About the code
 

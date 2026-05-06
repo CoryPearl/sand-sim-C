@@ -1612,7 +1612,7 @@ for (int row = gridHeight - 1; row >= 0; row--) {
 
         EndDrawing();
 
-        SetWindowTitle(TextFormat("Sand Simulator - %i FPS - %i Particles - %i Pixels", GetFPS(), pixelCount, pixelCount * (drawSize * drawSize)));
+        SetWindowTitle(TextFormat("Sand Simulator - %i FPS ", GetFPS()));
         frameCount++;
 }
 
