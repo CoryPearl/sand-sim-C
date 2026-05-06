@@ -5,7 +5,6 @@
 // - Lava not cooling into stone anymore
 // - Should lava beat ice, probobly
 // - impliment jimmy, bounces around amlisly, can spawn in as many as you want, dies if hits lava
-
 // Compile wiht new changes and add jimmy
 
 #include <raylib.h>
@@ -219,38 +218,6 @@ void explodeNapalm(Color *pixelColors, Pixel *pixels, int gridWidth, int gridHei
     free(cluster);
     free(seen);
     free(thrown);
-}
-
-void boxBlurExpand(uint8_t *src, uint8_t *dst, int w, int h, int r) {
-    int total = w * h;
-    int *psum = calloc(total, sizeof(int));
-
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            int above = y > 0       ? psum[(y-1)*w + x]   : 0;
-            int left  = x > 0       ? psum[y*w + (x-1)]   : 0;
-            int diag  = (x>0 && y>0)? psum[(y-1)*w+(x-1)] : 0;
-            psum[y*w + x] = src[y*w + x] + above + left - diag;
-        }
-    }
-
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            int x0 = x-r < 0   ? 0   : x-r;
-            int x1 = x+r >= w  ? w-1 : x+r;
-            int y0 = y-r < 0   ? 0   : y-r;
-            int y1 = y+r >= h  ? h-1 : y+r;
-
-            int sum = psum[y1*w + x1]
-                    - (y0 > 0 ? psum[(y0-1)*w + x1]   : 0)
-                    - (x0 > 0 ? psum[y1*w + (x0-1)]   : 0)
-                    + (x0 > 0 && y0 > 0 ? psum[(y0-1)*w+(x0-1)] : 0);
-
-            dst[y*w + x] = (sum > 0) ? 1 : 0;
-        }
-    }
-
-    free(psum);
 }
 
 int main() {
@@ -650,9 +617,6 @@ int main() {
         if (waterCount + lavaCount > 0) {
             lavaDominance = (float)lavaCount / (float)(lavaCount + waterCount);
         }
-
-        // boxBlurExpand(lavaRaw,  hasLavaInRange,  gridWidth, gridHeight, reactionRangeWater);
-        // boxBlurExpand(waterRaw, hasWaterInRange, gridWidth, gridHeight, reactionRangeLava);
 
         pixelCount = 0;
         for (int row = gridHeight - 1; row >= 0; row--) {

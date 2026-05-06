@@ -250,45 +250,25 @@ void explodeNapalm(Color *pixelColors, Pixel *pixels, int gridWidth, int gridHei
     free(thrown);
 }
 
-void boxBlurExpand(uint8_t *src, uint8_t *dst, int w, int h, int r) {
-    int total = w * h;
-    int *psum = calloc(total, sizeof(int));
-
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            int above = y > 0       ? psum[(y-1)*w + x]   : 0;
-            int left  = x > 0       ? psum[y*w + (x-1)]   : 0;
-            int diag  = (x>0 && y>0)? psum[(y-1)*w+(x-1)] : 0;
-            psum[y*w + x] = src[y*w + x] + above + left - diag;
-        }
-    }
-
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            int x0 = x-r < 0   ? 0   : x-r;
-            int x1 = x+r >= w  ? w-1 : x+r;
-            int y0 = y-r < 0   ? 0   : y-r;
-            int y1 = y+r >= h  ? h-1 : y+r;
-
-            int sum = psum[y1*w + x1]
-                    - (y0 > 0 ? psum[(y0-1)*w + x1]   : 0)
-                    - (x0 > 0 ? psum[y1*w + (x0-1)]   : 0)
-                    + (x0 > 0 && y0 > 0 ? psum[(y0-1)*w+(x0-1)] : 0);
-
-            dst[y*w + x] = (sum > 0) ? 1 : 0;
-        }
-    }
-
-    free(psum);
-}
-
 void UpdateDrawFrame(void) {
     Vector2 mousePos = GetMousePosition();
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
 
         int textSize2 = MeasureText(TextFormat("%i", drawAmount), 24);
 
+        int right = screenWidth - 10;
+
+        // right button (divide)
+        int btnRightMin = right - 30;
+        int btnRightMax = right;
+
+        // text
+        int textRight = btnRightMin - 10;
+        int textLeft = textRight - textSize2;
+
         // left button (multiply)
+        int btnLeftMax = textLeft - 10;
+        int btnLeftMin = btnLeftMax - 30;
 
         if (mousePos.y >= 10 && mousePos.y <= 40) {
 
@@ -352,7 +332,19 @@ void UpdateDrawFrame(void) {
 
             int textSize2 = MeasureText(TextFormat("%i", drawAmount), 24);
 
+            int right = screenWidth - 10;
+
+            // right button (divide)
+            int btnRightMin = right - 30;
+            int btnRightMax = right;
+
+            // text
+            int textRight = btnRightMin - 10;
+            int textLeft = textRight - textSize2;
+
             // left button (multiply)
+            int btnLeftMax = textLeft - 10;
+            int btnLeftMin = btnLeftMax - 30;
 
             if (mousePos.y >= 10 && mousePos.y <= 40) {
 
@@ -590,9 +582,6 @@ void UpdateDrawFrame(void) {
         if (waterCount + lavaCount > 0) {
             lavaDominance = (float)lavaCount / (float)(lavaCount + waterCount);
         }
-
-        // boxBlurExpand(lavaRaw,  hasLavaInRange,  gridWidth, gridHeight, reactionRangeWater);
-        // boxBlurExpand(waterRaw, hasWaterInRange, gridWidth, gridHeight, reactionRangeLava);
 
         pixelCount = 0;
         for (int row = gridHeight - 1; row >= 0; row--) {
@@ -1612,7 +1601,7 @@ for (int row = gridHeight - 1; row >= 0; row--) {
 
         EndDrawing();
 
-        SetWindowTitle(TextFormat("Sand Simulator - %i FPS ", GetFPS()));
+        SetWindowTitle(TextFormat("Sand Simulator - %i FPS - %i Particles - %i Pixels", GetFPS(), pixelCount, pixelCount * (drawSize * drawSize)));
         frameCount++;
 }
 
