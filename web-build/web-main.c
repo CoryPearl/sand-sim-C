@@ -4,6 +4,9 @@
 // Final fixes
 // - Lava not cooling into stone anymore
 // - Should lava beat ice, probobly
+// - impliment jimmy, bounces around amlisly, can spawn in as many as you want, dies if hits lava
+
+// Compile wiht new changes and add jimmy
 
 #include <raylib.h>
 #include <stdio.h>
@@ -1607,18 +1610,29 @@ for (int row = gridHeight - 1; row >= 0; row--) {
 
 int main() {
     InitWindow(screenWidth, screenHeight, "Sand Simulator - Web");
+    srand(time(NULL));
 
-    // Initialize Memory
     pixelColors = (Color *)malloc(screenWidth * screenHeight * sizeof(Color));
-    pixels = (Pixel *)malloc(gridWidth * gridHeight * sizeof(Pixel));
+    if (!pixelColors) { CloseWindow(); return 1; }
 
-    for (int i = 0; i < screenWidth * screenHeight; i++) pixelColors[i] = BLACK;
-    for (int i = 0; i < gridWidth * gridHeight; i++) {
-        pixels[i] = (Pixel){'n', i % gridWidth, i / gridWidth, ' ', BLACK, -1, -1};
+    pixels = (Pixel *)malloc(gridWidth * gridHeight * sizeof(Pixel));
+    if (!pixels) { free(pixelColors); CloseWindow(); return 1; }
+
+    for (int i = 0; i < screenWidth * screenHeight; i++) {
+        pixelColors[i] = (Color){0, 0, 0, 255};
     }
 
-    // Load Assets
-   Image hammerImg = LoadImageFromMemory(".png", ___assets_hammer_png, ___assets_hammer_png_len); 
+    for (int i = 0; i < gridWidth * gridHeight; i++) {
+        pixels[i].draw = 'n';
+        pixels[i].x = i % gridWidth;
+        pixels[i].y = i / gridWidth;
+        pixels[i].type = ' ';
+        pixels[i].life = -1;
+        pixels[i].heat = -1;
+        pixels[i].color = (Color){0, 0, 0, 255};
+    }
+
+    Image hammerImg = LoadImageFromMemory(".png", ___assets_hammer_png, ___assets_hammer_png_len);
     hammerTex = LoadTextureFromImage(hammerImg);
     UnloadImage(hammerImg);
 
@@ -1626,7 +1640,6 @@ int main() {
     tex = LoadTextureFromImage(img);
     UnloadImage(img);
 
-    // Emscripten Loop
     emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
     
     return 0;

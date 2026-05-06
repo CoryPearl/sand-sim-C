@@ -5,6 +5,7 @@
 // - Lava not cooling into stone anymore
 // - Should lava beat ice, probobly
 // - impliment jimmy, bounces around amlisly, can spawn in as many as you want, dies if hits lava
+
 // Compile wiht new changes and add jimmy
 
 #include <raylib.h>
