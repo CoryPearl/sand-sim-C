@@ -5,14 +5,14 @@
 // - Lava not cooling into stone anymore
 // - Should lava beat ice, probobly
 
-// add a pet slime
-
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
 #include <string.h>
+#include <emscripten/emscripten.h>
+#include "hammer_data.h"
 
 #define totalTypes 8
 #define drawSize 2
@@ -27,6 +27,36 @@ typedef struct {
     int life;
     int heat;
 } Pixel;
+
+const int screenWidth = 1200;
+const int screenHeight = 800;
+// const int screenWidth = 2500;
+// const int screenHeight = 1300;
+const char types[] = {'s', 'w', 'S', 'l', 't', 'i', 'o', 'p'}; // s = sand, w = water, S = stone, l = lava, t = steam, i = ice, o = obsidian, p = napalm
+char listOrder[totalTypes];
+int waterMode = 1; // 1 = gap-aware (stop at cliffs) 2 = flat (scan to furthest)
+int drawAmount = 1;
+int selectedType = 's';
+int pixelCount = 0;
+int dropdownOpen = 0;
+int dropDownTimerDelay = 0;
+int reacted = 0;
+int frameCount = 0;
+int mode = 1; // 1 = draw, 2 = hammer
+Vector2 prevMouse = {-1, -1};
+
+Texture2D hammerTex;
+Texture2D tex;
+Color *pixelColors = NULL;
+Pixel *pixels = NULL;
+
+// Logical grid dimensions
+const int gridWidth = screenWidth  / drawSize; // 300
+const int gridHeight = screenHeight / drawSize; // 200
+const int reactionRangeWater = 20 / drawSize;
+const int reactionRangeLava = 20 / drawSize;
+int lavaCount = 0;
+int waterCount = 0;
 
 int randInt(int n1, int n2) {
     return (rand() % (n2 - n1 + 1)) + n1;
@@ -252,90 +282,13 @@ void boxBlurExpand(uint8_t *src, uint8_t *dst, int w, int h, int r) {
     free(psum);
 }
 
-int main() {
-    const int screenWidth = 1200;
-    const int screenHeight = 800;
-    // const int screenWidth = 2500;
-    // const int screenHeight = 1300;
-    const char types[] = {'s', 'w', 'S', 'l', 't', 'i', 'o', 'p'}; // s = sand, w = water, S = stone, l = lava, t = steam, i = ice, o = obsidian, p = napalm
-    char listOrder[totalTypes];
-    int waterMode = 1; // 1 = gap-aware (stop at cliffs) 2 = flat (scan to furthest)
-    int drawAmount = 1;
-    int selectedType = 's';
-    int pixelCount = 0;
-    int dropdownOpen = 0;
-    int dropDownTimerDelay = 0;
-    int reacted = 0;
-    int frameCount = 0;
-    int mode = 1; // 1 = draw, 2 = hammer
-    Vector2 prevMouse = {-1, -1};
-
-    // Logical grid dimensions
-    const int gridWidth = screenWidth  / drawSize; // 300
-    const int gridHeight = screenHeight / drawSize; // 200
-    const int reactionRangeWater = 20 / drawSize;
-    const int reactionRangeLava = 20 / drawSize;
-    int lavaCount = 0;
-    int waterCount = 0;
-
-    InitWindow(screenWidth, screenHeight, "Sand Simulator");
-    srand(time(NULL));
-
-    Image hammerImg = LoadImage("assets/hammer.png"); // Load into ram
-    // ImageResize(&hammerImg, 20, 20);
-    Texture2D hammerTex = LoadTextureFromImage(hammerImg); // Convert to GPU texture
-    UnloadImage(hammerImg); // Free it so no wasted ram
-
-    // GPU texture buffer — full screen resolution
-    Color *pixelColors = malloc(screenWidth * screenHeight * sizeof(Color));
-    if (!pixelColors) { CloseWindow(); return 1; }
-    for (int i = 0; i < screenWidth * screenHeight; i++)
-        pixelColors[i] = (Color){0, 0, 0, 255};
-
-    // To save SO much compute
-    // uint8_t *lavaRaw   = calloc(gridWidth * gridHeight, sizeof(uint8_t));
-    // uint8_t *waterRaw  = calloc(gridWidth * gridHeight, sizeof(uint8_t));
-    // uint8_t *hasLavaInRange  = calloc(gridWidth * gridHeight, sizeof(uint8_t));
-    // uint8_t *hasWaterInRange = calloc(gridWidth * gridHeight, sizeof(uint8_t));
-
-    // Logical pixel array — one entry per grid cell
-    Pixel *pixels = malloc(gridWidth * gridHeight * sizeof(Pixel));
-    if (!pixels) { free(pixelColors); CloseWindow(); return 1; }
-    for (int i = 0; i < gridWidth * gridHeight; i++) {
-        pixels[i].draw = 'n';
-        pixels[i].x = i % gridWidth;
-        pixels[i].y = i / gridWidth;
-        pixels[i].type = ' ';
-        pixels[i].life = -1;
-        pixels[i].heat = -1;
-        pixels[i].color = (Color){0, 0, 0, 255};
-    }
-
-    Image img = GenImageColor(screenWidth, screenHeight, BLACK);
-    Texture2D tex = LoadTextureFromImage(img);
-    UnloadImage(img);
-
-    SetTargetFPS(fps);
-
-    while (!WindowShouldClose()) {
-        Vector2 mousePos = GetMousePosition();
+void UpdateDrawFrame(void) {
+    Vector2 mousePos = GetMousePosition();
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
 
         int textSize2 = MeasureText(TextFormat("%i", drawAmount), 24);
 
-        int right = screenWidth - 10;
-
-        // right button (divide)
-        int btnRightMin = right - 30;
-        int btnRightMax = right;
-
-        // text
-        int textRight = btnRightMin - 10;
-        int textLeft = textRight - textSize2;
-
         // left button (multiply)
-        int btnLeftMax = textLeft - 10;
-        int btnLeftMin = btnLeftMax - 30;
 
         if (mousePos.y >= 10 && mousePos.y <= 40) {
 
@@ -399,19 +352,7 @@ int main() {
 
             int textSize2 = MeasureText(TextFormat("%i", drawAmount), 24);
 
-            int right = screenWidth - 10;
-
-            // right button (divide)
-            int btnRightMin = right - 30;
-            int btnRightMax = right;
-
-            // text
-            int textRight = btnRightMin - 10;
-            int textLeft = textRight - textSize2;
-
             // left button (multiply)
-            int btnLeftMax = textLeft - 10;
-            int btnLeftMin = btnLeftMax - 30;
 
             if (mousePos.y >= 10 && mousePos.y <= 40) {
 
@@ -1673,15 +1614,31 @@ for (int row = gridHeight - 1; row >= 0; row--) {
 
         SetWindowTitle(TextFormat("Sand Simulator - %i FPS - %i Particles - %i Pixels", GetFPS(), pixelCount, pixelCount * (drawSize * drawSize)));
         frameCount++;
+}
+
+int main() {
+    InitWindow(screenWidth, screenHeight, "Sand Simulator - Web");
+
+    // Initialize Memory
+    pixelColors = (Color *)malloc(screenWidth * screenHeight * sizeof(Color));
+    pixels = (Pixel *)malloc(gridWidth * gridHeight * sizeof(Pixel));
+
+    for (int i = 0; i < screenWidth * screenHeight; i++) pixelColors[i] = BLACK;
+    for (int i = 0; i < gridWidth * gridHeight; i++) {
+        pixels[i] = (Pixel){'n', i % gridWidth, i / gridWidth, ' ', BLACK, -1, -1};
     }
 
-    UnloadTexture(hammerTex);
-    // free(lavaRaw);
-    // free(waterRaw);
-    // free(hasLavaInRange);
-    // free(hasWaterInRange);
-    free(pixels);
-    free(pixelColors);
-    CloseWindow();
+    // Load Assets
+   Image hammerImg = LoadImageFromMemory(".png", ___assets_hammer_png, ___assets_hammer_png_len); 
+    hammerTex = LoadTextureFromImage(hammerImg);
+    UnloadImage(hammerImg);
+
+    Image img = GenImageColor(screenWidth, screenHeight, BLACK);
+    tex = LoadTextureFromImage(img);
+    UnloadImage(img);
+
+    // Emscripten Loop
+    emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
+    
     return 0;
 }

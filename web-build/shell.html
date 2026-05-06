@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Raylib Web App</title>
+    <style>
+      body {
+        background-color: black;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #canvas {
+        border: 2px solid #555; /* Subtle grey border */
+        background-color: black;
+        margin-top: 20px; /* Space from the top of the screen */
+        image-rendering: pixelated; /* Keeps pixels sharp */
+      }
+
+      /* Hide standard emscripten UI elements */
+      #status {
+        color: white;
+        font-family: sans-serif;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status">Downloading...</div>
+    <canvas
+      id="canvas"
+      oncontextmenu="event.preventDefault()"
+      tabindex="-1"
+    ></canvas>
+
+    <script type="text/javascript">
+      var statusElement = document.getElementById('status');
+      var Module = {
+        print: (function () {
+          return function (text) {
+            console.log(text);
+          };
+        })(),
+        canvas: (function () {
+          var canvas = document.getElementById('canvas');
+          return canvas;
+        })(),
+        setStatus: function (text) {
+          if (!Module.setStatus.last)
+            Module.setStatus.last = { time: Date.now(), text: '' };
+          if (text === Module.setStatus.last.text) return;
+
+          // If the text is empty or starts with 'All downloads' or 'Running', hide it
+          if (
+            !text ||
+            text.includes('All downloads') ||
+            text.includes('Running')
+          ) {
+            statusElement.style.display = 'none';
+          } else {
+            statusElement.style.display = 'block';
+            statusElement.innerHTML = text;
+          }
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function (left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(
+            left
+              ? 'Preparing... (' +
+                  (this.totalDependencies - left) +
+                  '/' +
+                  this.totalDependencies +
+                  ')'
+              : '', // Pass an empty string to trigger the hide logic above
+          );
+        },
+      };
+
+      Module.setStatus('Downloading...');
+
+      window.onerror = function () {
+        statusElement.style.display = 'block';
+        statusElement.innerHTML = 'Exception thrown, see JavaScript console';
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
